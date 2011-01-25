@@ -33,7 +33,7 @@ public class CMMInterpreterVisitor implements
 	public CMMData visit(CMMASTSumNode node, CMMEnvironment data) {
 		CMMData x = node.getChild(0).accept(this, data);
 		if (!(x instanceof CMMNumber)) {
-			throw new RuntimeException("Invalid operand to numerical operator +/-");
+			throw new RuntimeException("Invalid operand to numerical operator");
 		}
 		CMMNumber a = (CMMNumber)x;
 		for (int i = 1; i < node.numChildren(); i += 2) {
@@ -47,6 +47,8 @@ public class CMMInterpreterVisitor implements
 				a = new CMMNumber(a.value() + b.value());
 			} else if (op.equals("minus")) {
 				a = new CMMNumber(a.value() - b.value());
+			} else {
+				throw new RuntimeException("Unknown operator:" + op);
 			}
 		}
 		return a;
@@ -80,6 +82,8 @@ public class CMMInterpreterVisitor implements
 				a = new CMMBoolean(a.value() && b.value());
 			} else if (op.equals("or")) {
 				a = new CMMBoolean(a.value() || b.value());
+			} else {
+				throw new RuntimeException("Unknown operator:" + op);
 			}
 		}
 		return a;
@@ -128,11 +132,12 @@ public class CMMInterpreterVisitor implements
 			return new CMMBoolean(a.value == b.value);
 		} else if (op.equals("ne")) {
 			return new CMMBoolean(a.value != b.value);
+		} else {
+			throw new RuntimeException("Unknown operator:" + op);
 		}
-		return null;
 	}
 
-	@Override
+	// Exp -> Element (exp Element)*  [>1] 
 	public CMMData visit(CMMASTElementPlusNode node, CMMEnvironment data) {
 		return visitChildren(node, data);
 	}
@@ -157,6 +162,8 @@ public class CMMInterpreterVisitor implements
 				a = new CMMNumber(a.value() / b.value());
 			} else if (op.equals("mod")) {
 				a = new CMMNumber(a.value() % b.value());
+			} else {
+				throw new RuntimeException("Unknown operator:" + op);
 			}
 		}
 		return a;
@@ -189,10 +196,27 @@ public class CMMInterpreterVisitor implements
 		return null;
 	}
 
-	@Override
+	// Exp -> Element (exp Element)*  [>1] 
 	public CMMData visit(CMMASTExpNode node, CMMEnvironment data) {
-		// TODO Auto-generated method stub
-		return null;
+		CMMData x = node.getChild(0).accept(this, data);
+		if (!(x instanceof CMMNumber)) {
+			throw new RuntimeException("Invalid operand to numeric operator");
+		}
+		CMMNumber a = (CMMNumber)x;
+		for (int i = 1; i < node.numChildren(); i += 2) {
+			CMMData y = node.getChild(i+1).accept(this, data);
+			String op = node.getChild(i).getName();
+			if (!(y instanceof CMMNumber)) {
+				throw new RuntimeException("Invalid operand to numeric operator");
+			}
+			CMMNumber b = (CMMNumber)y;
+			if (op.equals("exp")) {
+				a = new CMMNumber(Math.pow(a.value(), b.value()));
+			} else {
+				throw new RuntimeException("Unknown operator:" + op);
+			}
+		}
+		return a;
 	}
 
 	// FunctionDefinition -> Type id ParameterList Block
@@ -208,8 +232,21 @@ public class CMMInterpreterVisitor implements
 	// Assignment -> Logical (gets Logical)?
 	public CMMData visit(CMMASTAssignmentNode node, CMMEnvironment data) {
 		if (node.numChildren() > 1) {
-			// an actual assignment operation
-			return null; // TODO: finish
+			CMMASTNode n = node.getChild(0);  // Element
+			if (!n.getName().equals("Element") || n.numChildren() != 1) {
+				throw new RuntimeException("Attempting to assign to non-lvalue");
+			}
+			n = n.getChild(0);   // ElementPlus
+			if (!n.getName().equals("ElementPlus") || n.numChildren() != 1) {
+				throw new RuntimeException("Attempting to assign to non-lvalue");
+			}
+			n = n.getChild(0);   // Token
+			if (!n.getName().equals("id")) {
+				throw new RuntimeException("Attempting to assign to non-lvalue");
+			}
+			CMMData res = node.getChild(2).accept(this, data);
+			env.assign(n.getValue(), res);
+			return res; // TODO: typechecking
 		} else {
 			return visitChildren(node, data);
 		}

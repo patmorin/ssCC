@@ -48,6 +48,25 @@ public class CMMEnvironment {
 	}
 	
 	/**
+	 * Assign a value to a variable
+	 * @param id the identifier to lookup
+	 * @return the value that gets assigned to id, or null if id
+	 * was not found
+	 */
+	public CMMData assign(String id, CMMData value) {
+		ListIterator<Map<String,CMMData>> i = env.listIterator(env.size());
+		while (i.hasPrevious()) {
+			Map<String,CMMData> frame = i.previous();
+			if (frame.containsKey(id)) {
+				frame.put(id, value);
+				return value;
+			}
+		}
+		return null;
+	}
+
+	
+	/**
 	 * Add an id/value pair to the topmost stack frame
 	 * @param id
 	 * @param value
