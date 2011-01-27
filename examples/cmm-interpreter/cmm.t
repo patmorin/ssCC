@@ -13,7 +13,7 @@
 
 # skip defines tokens that are consumed but not reported by the tokenizer
 # Usually these are used to skip over things like whitespace and/or comments
-skip: [\s\t\n\r]
+skip: [\s\t\n\r] | //[^\r\n]*
 
 # end of line character
 eol: ;
@@ -64,7 +64,7 @@ string: "([^"]|\\")*"
 # numeric constants
 :integer: [0123456789]+
 :float: :integer: (\.:integer:)? | \.:integer:
-number: -? :float: | :float: [eE] [-\+]? :integer:?
+number: -? (:float: | :float: [eE] [-\+]? :integer:?)
 
 # boolean constants
 boolean: true | false

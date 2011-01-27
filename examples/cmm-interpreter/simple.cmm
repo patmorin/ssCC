@@ -1,10 +1,26 @@
+
+// return true if a is greater than b
 boolean gt(number a, number b) {
-  return  a > b;
+  a > b;
 }
 
+// count from 0 to n-1, printing the counter
+number count(number n) {
+  number i;
+  i = 0;
+  while (i < n) {
+    println(i);
+    i = i + 1;
+  }
+  i;
+}
+
+// do some stupid things
 number main() {
-  boolean x;
-  x = 5;
-  x * 2;
+  number x;
+  x = 5 + 7;
+  println(x * 2);
+  count(10);
+  gt(5, 2);
 }
 

@@ -10,13 +10,11 @@ Block -> bb ExpressionList be
 
 ExpressionList -> Statement*
 
-Statement -> Declaration | ReturnStatement | WhileLoop | DoLoop | IfStatement | SimpleStatement
+Statement -> Declaration | WhileLoop | DoLoop | IfStatement | SimpleStatement
 
-Declaration -> Type id (listsep Identifier)* eol
+Declaration -> Type id (listsep id)* eol
 
 Type -> number_t | string_t | boolean_t 
-
-ReturnStatement -> return Logical eol
 
 WhileLoop -> while Condition Block
 
@@ -38,11 +36,7 @@ Exp -> Element (exp Element)*  [>1]
 Element -> Constant | lparen Logical rparen | ElementPlus
 ElementPlus -> id ArgumentList?
 
-Constant -> StringConstant | BooleanConstant | NumberConstant
-
-StringConstant -> string
-BooleanConstant -> boolean
-NumberConstant -> number
+Constant -> string | boolean | number
 
 ArgumentList -> lparen (Assignment (listsep Assignment)*)? rparen
 

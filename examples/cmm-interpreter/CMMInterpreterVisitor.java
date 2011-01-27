@@ -11,57 +11,73 @@ public class CMMInterpreterVisitor implements
 	public CMMInterpreterVisitor() {
 		env = new CMMEnvironment();
 	}
-	
-	@Override
+
 	public CMMData visit(CMMASTNode node, CMMEnvironment data) {
-		// should never be called
 		return null;
 	}
-
-	@Override
-	public CMMData visit(CMMASTNumberConstantNode node, CMMEnvironment data) {
+	
+	public CMMData visit(CMMASTProgramNode node, CMMEnvironment data) {
 		return visitChildren(node, data);
 	}
 
-	@Override
-	public CMMData visit(CMMASTParameterNode node, CMMEnvironment data) {
-		// TODO Auto-generated method stub
+	// FunctionDefinition -> Type id ParameterList Block
+	public CMMData visit(CMMASTFunctionDefinitionNode node, CMMEnvironment data) {
+		String id = node.getChild(1).getValue();
+		env.bind(id, new CMMFunction(node));
+		if (id.equals("main")) {
+			return node.getChild(3).accept(this, data);
+		}
 		return null;
 	}
 
-	// Sum -> Term ((plus|minus) Term)*  [>1]
-	public CMMData visit(CMMASTSumNode node, CMMEnvironment data) {
-		CMMData x = node.getChild(0).accept(this, data);
-		if (!(x instanceof CMMNumber)) {
-			throw new RuntimeException("Invalid operand to numerical operator");
-		}
-		CMMNumber a = (CMMNumber)x;
-		for (int i = 1; i < node.numChildren(); i += 2) {
-			CMMData y = node.getChild(i+1).accept(this, data);
-			String op = node.getChild(i).getName();
-			if (!(y instanceof CMMNumber)) {
-				throw new RuntimeException("Invalid operand to numerical operator +/-");
-			}
-			CMMNumber b = (CMMNumber)y;
-			if (op.equals("plus")) {
-				a = new CMMNumber(a.value() + b.value());
-			} else if (op.equals("minus")) {
-				a = new CMMNumber(a.value() - b.value());
-			} else {
-				throw new RuntimeException("Unknown operator:" + op);
-			}
-		}
-		return a;
+	public CMMData visit(CMMASTParameterListNode node, CMMEnvironment data) {
+		return null;
 	}
 
-	@Override
+	public CMMData visit(CMMASTParameterNode node, CMMEnvironment data) {
+		return null;
+	}
+
+	public CMMData visit(CMMASTElementNode node, CMMEnvironment data) {
+		return visitChildren(node, data);
+	}
+
+	public CMMData visit(CMMASTExpressionListNode node, CMMEnvironment data) {
+		return visitChildren(node, data);
+	}
+
 	public CMMData visit(CMMASTSimpleStatementNode node, CMMEnvironment data) {
 		return visitChildren(node, data);
 	}
 
-	@Override
 	public CMMData visit(CMMASTConstantNode node, CMMEnvironment data) {
 		return visitChildren(node, data);
+	}
+
+	// Assignment -> Logical (gets Logical)?
+	public CMMData visit(CMMASTAssignmentNode node, CMMEnvironment data) {
+		if (node.numChildren() > 1) {
+			CMMASTNode n = node.getChild(0);  // Element
+			if (!n.getName().equals("Element") || n.numChildren() != 1)
+				throw new RuntimeException("Assigning to non-lvalue");
+			n = n.getChild(0);   // ElementPlus
+			if (!n.getName().equals("ElementPlus") || n.numChildren() != 1) 
+				throw new RuntimeException("Assigning to non-lvalue");
+			n = n.getChild(0);   // Token
+			if (!n.getName().equals("id"))
+				throw new RuntimeException("Assigning to non-lvalue");
+			String id = n.getValue();
+			if (env.lookup(id) == null)
+				throw new RuntimeException("Assigning to undeclared variable " + id);
+			CMMData res = node.getChild(2).accept(this, data);
+			if (res.getClass() != env.lookup(id).getClass()) 
+				throw new RuntimeException("Type mismatch on assignment " 
+						+ res.getClass() + " vs. " + env.lookup(id).getClass());
+			env.assign(id, res);
+			return res; 
+		} else {
+			return visitChildren(node, data);
+		}
 	}
 
 	// Logical -> Comparison ((and|or) Comparison)*  [>1]
@@ -87,27 +103,6 @@ public class CMMInterpreterVisitor implements
 			}
 		}
 		return a;
-	}
-
-	@Override
-	public CMMData visit(CMMASTParameterListNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
-	}
-
-	@Override
-	public CMMData visit(CMMASTArgumentListNode node, CMMEnvironment data) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public CMMData visit(CMMASTElementNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
-	}
-
-	@Override
-	public CMMData visit(CMMASTExpressionListNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
 	}
 
 	// Comparison -> Sum ((lt|gt|eq|le|ge|ne) Sum)?  [>1]
@@ -137,9 +132,29 @@ public class CMMInterpreterVisitor implements
 		}
 	}
 
-	// Exp -> Element (exp Element)*  [>1] 
-	public CMMData visit(CMMASTElementPlusNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
+	// Sum -> Term ((plus|minus) Term)*  [>1]
+	public CMMData visit(CMMASTSumNode node, CMMEnvironment data) {
+		CMMData x = node.getChild(0).accept(this, data);
+		if (!(x instanceof CMMNumber)) {
+			throw new RuntimeException("Invalid operand to numerical operator");
+		}
+		CMMNumber a = (CMMNumber)x;
+		for (int i = 1; i < node.numChildren(); i += 2) {
+			CMMData y = node.getChild(i+1).accept(this, data);
+			String op = node.getChild(i).getName();
+			if (!(y instanceof CMMNumber)) {
+				throw new RuntimeException("Invalid operand to numerical operator +/-");
+			}
+			CMMNumber b = (CMMNumber)y;
+			if (op.equals("plus")) {
+				a = new CMMNumber(a.value() + b.value());
+			} else if (op.equals("minus")) {
+				a = new CMMNumber(a.value() - b.value());
+			} else {
+				throw new RuntimeException("Unknown operator:" + op);
+			}
+		}
+		return a;
 	}
 
 	// Term -> Exp ((multiply|divide|mod) Exp)* [>1]
@@ -169,33 +184,6 @@ public class CMMInterpreterVisitor implements
 		return a;
 	}
 
-	@Override
-	public CMMData visit(CMMASTConditionNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
-	}
-
-	@Override
-	public CMMData visit(CMMASTWhileLoopNode node, CMMEnvironment data) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public CMMData visit(CMMASTBooleanConstantNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
-	}
-
-	@Override
-	public CMMData visit(CMMASTDoLoopNode node, CMMEnvironment data) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public CMMData visit(CMMASTReturnStatementNode node, CMMEnvironment data) {
-		CMMData res = node.getChild(1).accept(this, data);
-		// TODO: finish
-		return null;
-	}
-
 	// Exp -> Element (exp Element)*  [>1] 
 	public CMMData visit(CMMASTExpNode node, CMMEnvironment data) {
 		CMMData x = node.getChild(0).accept(this, data);
@@ -219,38 +207,78 @@ public class CMMInterpreterVisitor implements
 		return a;
 	}
 
-	// FunctionDefinition -> Type id ParameterList Block
-	public CMMData visit(CMMASTFunctionDefinitionNode node, CMMEnvironment data) {
-		String id = node.getChild(1).getValue();
-		env.bind(id, new CMMFunction(node));
-		if (id.equals("main")) {
-			return node.getChild(3).accept(this, data);
+	// ElementPlus -> id ArgumentList?
+	public CMMData visit(CMMASTElementPlusNode node, CMMEnvironment data) {
+		if (node.numChildren() == 1) { // just an identifier
+			return node.getChild(0).accept(this, data); 
+		} else { // a function call
+			String fname = node.getChild(0).getValue();
+			if (fname.equals("print")) {
+				CMMData res = visitChildren(node.getChild(1), data);
+				System.out.print(res);
+				return res;
+			}
+			if (fname.equals("println")) {
+				CMMData res = visitChildren(node.getChild(1), data);
+				System.out.println(res);
+				return res;
+			}
+			CMMData f = env.lookup(fname);
+			if (!(f instanceof CMMFunction)) {
+				throw new RuntimeException("Attempt to call non-function "+ fname);
+			}
+			CMMFunction fn = (CMMFunction)f;
+			env.pushFrame(); // add a frame for the parameters
+			env.bind("11this", fn);
+			node.getChild(1).accept(this, data);
+			CMMData res = fn.value().getChild(3).accept(this, data);  // visit the block now
+			if (res == null)
+				throw new RuntimeException("Function not returning a value " + fname);
+			// TODO: typecheck return value
+			env.popFrame();
+			return res;
+		}
+	}
+
+	// ArgumentList -> lparen (Assignment (listsep Assignment)*)? rparen
+	public CMMData visit(CMMASTArgumentListNode node, CMMEnvironment data) {
+		CMMFunction fn = (CMMFunction)env.lookup("11this");
+		CMMASTParameterListNode pl = (CMMASTParameterListNode)fn.value().getChild(2);
+		if (pl.numChildren() != node.numChildren()) {
+			throw new RuntimeException("Calling function with wrong number of arguments");
+		}
+		for (int i = 1; i < node.numChildren(); i += 2) {
+			CMMData value = node.getChild(i).accept(this, data);
+			String id = pl.getChild(i).getChild(1).getValue();
+			env.bind(id, value);
 		}
 		return null;
 	}
 
-	// Assignment -> Logical (gets Logical)?
-	public CMMData visit(CMMASTAssignmentNode node, CMMEnvironment data) {
-		if (node.numChildren() > 1) {
-			CMMASTNode n = node.getChild(0);  // Element
-			if (!n.getName().equals("Element") || n.numChildren() != 1) {
-				throw new RuntimeException("Attempting to assign to non-lvalue");
-			}
-			n = n.getChild(0);   // ElementPlus
-			if (!n.getName().equals("ElementPlus") || n.numChildren() != 1) {
-				throw new RuntimeException("Attempting to assign to non-lvalue");
-			}
-			n = n.getChild(0);   // Token
-			if (!n.getName().equals("id")) {
-				throw new RuntimeException("Attempting to assign to non-lvalue");
-			}
-			CMMData res = node.getChild(2).accept(this, data);
-			env.assign(n.getValue(), res);
-			return res; // TODO: typechecking
-		} else {
-			return visitChildren(node, data);
+	// WhileLoop -> while Condition Block
+	public CMMData visit(CMMASTWhileLoopNode node, CMMEnvironment data) {
+		CMMData cont = node.getChild(1).accept(this, data);
+		if (!(cont instanceof CMMBoolean)) {
+			throw new RuntimeException("Invalid (non-boolean) condition in while loop");
 		}
+		CMMData res = null;
+		CMMBoolean cb = (CMMBoolean)cont;
+		while (cb.value()) {
+			res = node.getChild(2).accept(this, data);
+			cb = (CMMBoolean)node.getChild(1).accept(this, data);
+		}
+		return res;
 	}
+
+	public CMMData visit(CMMASTConditionNode node, CMMEnvironment data) {
+		return visitChildren(node, data);
+	}
+
+	// DoLoop -> do Block while Condition eol
+	public CMMData visit(CMMASTDoLoopNode node, CMMEnvironment data) {
+		throw new UnsupportedOperationException();
+	}
+
 
 	@Override
 	public CMMData visit(CMMASTStatementNode node, CMMEnvironment data) {
@@ -259,7 +287,6 @@ public class CMMInterpreterVisitor implements
 
 	@Override
 	public CMMData visit(CMMASTTypeNode node, CMMEnvironment data) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -288,22 +315,14 @@ public class CMMInterpreterVisitor implements
 		return null;
 	}
 
-	@Override
-	public CMMData visit(CMMASTStringConstantNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
-	}
 
-	@Override
-	public CMMData visit(CMMASTProgramNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
-	}
-
-	@Override
 	public CMMData visit(CMMASTBlockNode node, CMMEnvironment data) {
-		return visitChildren(node, data);
+		env.pushFrame();
+		CMMData res = visitChildren(node, data);
+		env.popFrame();
+		return res;
 	}
 
-	@Override
 	public CMMData visit(CMMASTToken node, CMMEnvironment data) {
 		if (node.getName().equals("number")) {
 			return new CMMNumber(Double.parseDouble(node.getValue()));
@@ -313,6 +332,8 @@ public class CMMInterpreterVisitor implements
 			return new CMMBoolean(Boolean.parseBoolean(node.getValue()));			
 		} else if (node.getName().equals("id")) {
 			String id = node.getValue();
+			if (env.lookup(id) == null)
+				throw new RuntimeException("Reference to undefined variable " + id);
 			return env.lookup(id);
 		}
 		return null;
