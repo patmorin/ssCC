@@ -247,7 +247,7 @@ public class CMMInterpreterVisitor implements
 		if (pl.numChildren() != node.numChildren()) {
 			throw new RuntimeException("Calling function with wrong number of arguments");
 		}
-		for (int i = 1; i < node.numChildren(); i += 2) {
+		for (int i = 1; i < node.numChildren()-1; i += 2) {
 			CMMData value = node.getChild(i).accept(this, data);
 			String id = pl.getChild(i).getChild(1).getValue();
 			env.bind(id, value);
