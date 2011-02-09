@@ -230,8 +230,11 @@ public class CMMInterpreterVisitor implements
 			CMMFunction fn = (CMMFunction)f;
 			env.pushFrame(); // add a frame for the parameters
 			env.bind("11this", fn);
+			env.bind("22returned", new CMMBoolean(false));
+			env.bind("22retval", null);
 			node.getChild(1).accept(this, data);
-			CMMData res = fn.value().getChild(3).accept(this, data);  // visit the block now
+			fn.value().getChild(3).accept(this, data);  // visit the block now
+			CMMData res = env.lookup("22retval");
 			if (res == null)
 				throw new RuntimeException("Function not returning a value " + fname);
 			// TODO: typecheck return value
@@ -338,7 +341,15 @@ public class CMMInterpreterVisitor implements
 		}
 		return null;
 	}
-	
+
+	@Override
+	public CMMData visit(CMMASTReturnStatementNode node, CMMEnvironment data) {
+		CMMData r = node.getChild(1).accept(this, data);
+		env.assign("22retval", r);
+		env.assign("22returned", new CMMBoolean(true));
+		return null;
+	}
+
 	protected CMMData visitChildren(CMMASTNode node, CMMEnvironment data) {
 		CMMData last = null;
 		for (int i = 0; i < node.numChildren(); i++) {
@@ -347,4 +358,5 @@ public class CMMInterpreterVisitor implements
 		}
 		return last;	
 	}
+
 }

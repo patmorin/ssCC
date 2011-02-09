@@ -10,7 +10,7 @@ Block -> bb ExpressionList be
 
 ExpressionList -> Statement*
 
-Statement -> Declaration | WhileLoop | DoLoop | IfStatement | SimpleStatement
+Statement -> Declaration | WhileLoop | DoLoop | IfStatement | ReturnStatement | SimpleStatement
 
 Declaration -> Type id (listsep id)* eol
 
@@ -23,6 +23,8 @@ DoLoop -> do Block while Condition eol
 IfStatement -> if Condition Block (elsif Condition Block)* (else Block)?
 
 Condition -> lparen Assignment rparen
+
+ReturnStatement -> return Assignment eol
 
 SimpleStatement -> Assignment eol
 
