@@ -353,6 +353,8 @@ public class CMMInterpreterVisitor implements
 	protected CMMData visitChildren(CMMASTNode node, CMMEnvironment data) {
 		CMMData last = null;
 		for (int i = 0; i < node.numChildren(); i++) {
+			CMMBoolean returned = (CMMBoolean)env.lookup("22returned");
+			if (returned != null && returned.value()) return null;
 			CMMData tmp = node.getChild(i).accept(this, data);
 			if (tmp != null) last = tmp;
 		}
