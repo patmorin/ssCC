@@ -2,7 +2,6 @@
 
 public class CMMInterpreterVisitor implements
 		CMMVisitor<CMMData, CMMEnvironment> {
-
 	/**
 	 * Environment keeps track of variable bindings
 	 */
