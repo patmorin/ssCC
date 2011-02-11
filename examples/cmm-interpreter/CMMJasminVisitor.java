@@ -1,13 +1,10 @@
 
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Reader;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -20,7 +17,7 @@ import java.util.Stack;
  * @author morin
  *
  */
-public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> {
+public class CMMJasminVisitor implements CMMVisitor<Integer, List<String>> {
 
 	static int BOOLEAN = 0;
 	static int NUMBER = 1;
@@ -44,6 +41,87 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 		"  return",
 		".end method",
 		"; End standard header" };
+	
+	
+	static String[] trailer = {
+		"; Begin standard trailer",
+		"",
+		".method public static print(F)F",
+		"   .limit stack 2",
+		"   .limit locals 1",
+		"   getstatic java/lang/System/out Ljava/io/PrintStream;",
+		"   fload 0",
+		"   invokestatic java/lang/Float/toString(F)Ljava/lang/String;",
+		"   invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V",
+		"   fload 0",
+		"   freturn",
+		".end method",
+		"",
+		".method public static print(Ljava/lang/String;)Ljava/lang/String;",
+		"   .limit stack 2",
+		"   .limit locals 2",
+		"   getstatic java/lang/System/out Ljava/io/PrintStream;",
+		"   aload 0",
+		"   invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V",
+		"   aload 0",
+		"   areturn",
+		".end method",
+		"",
+		".method public static print(I)I",
+		"   .limit stack 5",
+		"   .limit locals 2",
+		"   getstatic java/lang/System/out Ljava/io/PrintStream;",
+		"   iload 0",
+		"   ifeq false_label",
+		"   ldc \"true\"",
+		"   goto print_it",
+		"false_label:",
+		"   ldc \"false\"",
+		"print_it:",
+		"   invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V",
+		"   iload 0",
+		"   ireturn",
+		".end method",
+		"",
+		"",
+		".method public static println(F)F",
+		"   .limit stack 2",
+		"   .limit locals 1",
+		"   getstatic java/lang/System/out Ljava/io/PrintStream;",
+		"   fload 0",
+		"   invokestatic java/lang/Float/toString(F)Ljava/lang/String;",
+		"   invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V",
+		"   fload 0",
+		"   freturn",
+		".end method",
+		"",
+		".method public static println(Ljava/lang/String;)Ljava/lang/String;",
+		"   .limit stack 2",
+		"   .limit locals 2",
+		"   getstatic java/lang/System/out Ljava/io/PrintStream;",
+		"   aload 0",
+		"   invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V",
+		"   aload 0",
+		"   areturn",
+		".end method",
+		"",
+		".method public static println(I)I",
+		"   .limit stack 5",
+		"   .limit locals 2",
+		"   getstatic java/lang/System/out Ljava/io/PrintStream;",
+		"   iload 0",
+		"   ifeq false_label",
+		"   ldc \"true\"",
+		"   goto print_it",
+		"false_label:",
+		"   ldc \"false\"",
+		"print_it:",
+		"   invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V",
+		"   iload 0",
+		"   ireturn",
+		".end method",
+		"",
+		"; End of standard trailer"	};
 
 	protected class Data {
 		int location;
@@ -54,6 +132,12 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 			this.type = type;
 			this.location = location;
 		}
+	}
+	
+	int uniq;
+	
+	protected String getLabel() {
+		return "label" + uniq++;
 	}
 	
 	protected int s2t(String type) {
@@ -84,8 +168,12 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 			map.put(name, new Data(name, type, offset++));
 		}
 		
-		public void addFunction(String name, String sig) {
-			map.put(name, new Data(sig, FUNCTION, 0));
+		public void addPseudoVariable(String name, int type) {
+			map.put(name, new Data(name, type, -1));			
+		}
+		
+		public void addFunction(String sig, String fullName, int retType) {
+			map.put(sig, new Data(fullName, retType, -1));
 		}
 		
 		public Data lookup(String name) {
@@ -108,23 +196,29 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 	public CMMJasminVisitor() {
 		frames = new Stack<StackFrame>();
 		frames.push(new StackFrame());
+		frames.peek().addFunction("print(I)", "print(I)I", BOOLEAN);
+		frames.peek().addFunction("print(F)", "print(F)F", NUMBER);
+		frames.peek().addFunction("print(Ljava/lang/String;)", "print(Ljava/lang/String;)Ljava/lang/String;", STRING);
+		frames.peek().addFunction("println(I)", "println(I)I", BOOLEAN);
+		frames.peek().addFunction("println(F)", "println(F)F", NUMBER);
+		frames.peek().addFunction("println(Ljava/lang/String;)", "println(Ljava/lang/String;)Ljava/lang/String;", STRING);
 	}
 	
-	public List<String> visit(CMMASTNode node, List<String> output) {
-		return output;
+	public Integer visit(CMMASTNode node, List<String> output) {
+		return null;
 	}
 
 	// Parameter -> Type id
-	public List<String> visit(CMMASTParameterNode node, List<String> output) {
+	public Integer visit(CMMASTParameterNode node, List<String> output) {
 		String name = node.getChild(1).getValue();
 		String sType = node.getChild(0).getChild(0).getName();
 		int type = s2t(sType);
 		frames.peek().addVariable(name, type);
-		return output;
+		return null;
 	}
 
 	// Sum -> Term ((plus|minus) Term)*  [>1]
-	public List<String> visit(CMMASTSumNode node, List<String> output) {
+	public Integer visit(CMMASTSumNode node, List<String> output) {
 		node.getChild(0).accept(this, output);
 		for (int i = 1; i < node.numChildren(); i += 2) {
 			node.getChild(i+1).accept(this, output);
@@ -137,10 +231,10 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 				throw new RuntimeException("Unknown operator:" + op);
 			}
 		}
-		return output;
+		return NUMBER;
 	}
 
-	public List<String> visit(CMMASTLogicalNode node, List<String> output) {
+	public Integer visit(CMMASTLogicalNode node, List<String> output) {
 		node.getChild(0).accept(this, output);
 		for (int i = 1; i < node.numChildren(); i += 2) {
 			node.getChild(i+1).accept(this, output);
@@ -153,16 +247,16 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 				throw new RuntimeException("Unknown operator:" + op);
 			}
 		}
-		return output;
+		return BOOLEAN;
 	}
 
-	public List<String> visit(CMMASTComparisonNode node, List<String> output) {
+	public Integer visit(CMMASTComparisonNode node, List<String> output) {
 		node.getChild(0).accept(this, output);
 		for (int i = 1; i < node.numChildren(); i += 2) {
 			node.getChild(i+1).accept(this, output);
 			String op = node.getChild(i).getName();
-			String label1 = "label1";
-			String label2 = "label2";
+			String label1 = getLabel();
+			String label2 = getLabel();
 			output.add("  fcmpl");
 			output.add("  if" + op + " " + label1);
 			output.add("  ldc 0");
@@ -171,94 +265,106 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 			output.add("  ldc 1");
 			output.add(label2 + ":");
 		}
-		return output;
+		return BOOLEAN;
 	}
 
-	public List<String> visit(CMMASTTermNode node, List<String> output) {
+	public Integer visit(CMMASTTermNode node, List<String> output) {
 		// TODO Auto-generated method stub
-		return output;
+		return NUMBER;
 	}
 
-	public List<String> visit(CMMASTConditionNode node, List<String> output) {
+	public Integer visit(CMMASTExpNode node, List<String> output) {
 		// TODO Auto-generated method stub
-		return output;
+		return NUMBER;
 	}
 
-	public List<String> visit(CMMASTExpNode node, List<String> output) {
-		// TODO Auto-generated method stub
-		return output;
+	public Integer visit(CMMASTConditionNode node, List<String> output) {
+		Integer t = node.getChild(1).accept(this, output);
+		if (t != BOOLEAN) 
+			throw new RuntimeException("Condition not evaluating to boolean");
+		return null;
 	}
+
 
 	/**
 	 * Recursively visit all the children of a node
 	 * @param node
 	 * @param output
 	 */
-	protected void visitChildren(CMMASTNode node, List<String> output) {
+	protected Integer visitChildren(CMMASTNode node, List<String> output) {
+		Integer t = null;
 		for (int i = 0; i < node.numChildren(); i++) {
-			node.getChild(i).accept(this, output);
+			Integer t2 = node.getChild(i).accept(this, output);
+			if (t2 != null) t = t2;
 		}
+		return t;
 	}
 	
-	public List<String> visit(CMMASTSimpleStatementNode node, List<String> output) {
-		visitChildren(node, output);
-		return output;
+	public Integer visit(CMMASTSimpleStatementNode node, List<String> output) {
+		return visitChildren(node, output);
 	}
 
-	public List<String> visit(CMMASTConstantNode node, List<String> output) {
-		visitChildren(node, output);
-		return output;
+	public Integer visit(CMMASTConstantNode node, List<String> output) {
+		return visitChildren(node, output);
 	}
 
 
-	public List<String> visit(CMMASTParameterListNode node, List<String> output) {
+	public Integer visit(CMMASTParameterListNode node, List<String> output) {
 		visitChildren(node, output);
-		return output;
+		return null;
 	}
 
-	public List<String> visit(CMMASTArgumentListNode node, List<String> output) {
-		visitChildren(node, output);
-		return output;
+	public Integer visit(CMMASTArgumentListNode node, List<String> output) {
+		throw new RuntimeException("Internet error - evaluating argument list");
 	}
 
-	public List<String> visit(CMMASTElementNode node, List<String> output) {
-		visitChildren(node, output);
-		return output;
+	public Integer visit(CMMASTElementNode node, List<String> output) {
+		return visitChildren(node, output);
 	}
 
-	public List<String> visit(CMMASTExpressionListNode node, List<String> output) {
+	public Integer visit(CMMASTExpressionListNode node, List<String> output) {
 		visitChildren(node, output);
-		return output;
+		return null;
 	}
 
-	public List<String> visit(CMMASTElementPlusNode node, List<String> output) {
+	public Integer visit(CMMASTElementPlusNode node, List<String> output) {
 		if (node.numChildren() == 1) { // just an identifier
 			return node.getChild(0).accept(this, output); 
 		} else { // a function call
 			String fname = node.getChild(0).getValue();
+			CMMASTNode argList = node.getChild(1);
+			String sig = "";
+			for (int i = 1; i < argList.numChildren()-1; i += 2) {
+				int t = argList.getChild(i).accept(this, output);
+				sig += t2A[t];
+			}
+			fname += "(" + sig + ")";
 			Data f = lookup(fname);
 			if (f == null)
 				throw new RuntimeException("Attempt to call non-existent function: " + fname);
-			node.getChild(1).accept(this, output);  // push parameters
 			output.add("  invokestatic a/" + f.name);
+			// TODO: figure out the return type here
+			return f.type;
 		}
-		return output;
 	}
 
-
-	public List<String> visit(CMMASTWhileLoopNode node, List<String> output) {
+	// WhileLoop -> while Condition Block
+	public Integer visit(CMMASTWhileLoopNode node, List<String> output) {
+		// TODO
 		throw new UnsupportedOperationException("while loops not yet implemented");
+		// return null
 	}
 
-	public List<String> visit(CMMASTDoLoopNode node, List<String> output) {
+	public Integer visit(CMMASTDoLoopNode node, List<String> output) {
 		throw new UnsupportedOperationException("do-while loops not yet implemented");
+		// return null
 	}
 
-	public List<String> visit(CMMASTReturnStatementNode node, List<String> output) {
+	public Integer visit(CMMASTReturnStatementNode node, List<String> output) {
 		node.getChild(1).accept(this, output);
 		Data r = lookup("22retval");
-		output.add(t2a[r.type] + "return");
-		return output;
+		output.add("  " + t2a[r.type] + "return");
+		return null;
 	}
 
 	/**
@@ -276,29 +382,30 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 	}
 	
 	// FunctionDefinition -> Type id ParameterList Block
-	public List<String> visit(CMMASTFunctionDefinitionNode node, List<String> output) {
+	public Integer visit(CMMASTFunctionDefinitionNode node, List<String> output) {
 		String fname = node.getChild(1).getValue();
 		String stype = node.getChild(0).getChild(0).getName();
 		int itype = s2t(stype);
 		// build method signature
 		String sig = fname + "(" 
-			+ getSignature((CMMASTParameterListNode)node.getChild(2)) + ")" + t2A[itype];
-		output.add("\n.method public static " + sig);
+			+ getSignature((CMMASTParameterListNode)node.getChild(2)) + ")";
+		String fullName = sig + t2A[itype];
+		output.add("\n.method public static " + fullName);
 		output.add(".limit stack 50");
 		output.add(".limit locals 50");
-		frames.peek().addFunction(fname, sig);
-		frames.push(new StackFrame(frames.peek()));
-		frames.peek().addVariable("22retval", itype);
+		frames.peek().addFunction(sig, fullName, itype);
+		frames.push(new StackFrame());
+		frames.peek().addPseudoVariable("22retval", itype);
 		node.getChild(2).accept(this, output);   // parameter list
 		node.getChild(3).accept(this, output);   // block
 		frames.pop();
 		output.add(".end method");
-		return output;
+		return null;
 	}
 
-	public List<String> visit(CMMASTAssignmentNode node, List<String> output) {
+	public Integer visit(CMMASTAssignmentNode node, List<String> output) {
 		if (node.numChildren() == 1) {  // not really an assignment
-			visitChildren(node, output);
+			return visitChildren(node, output);
 		} else {
 			CMMASTNode n = node.getChild(0);  // Element
 			if (!n.getName().equals("Element") || n.numChildren() != 1)
@@ -314,62 +421,68 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 			if (data == null)
 				throw new RuntimeException("Assigning to undeclared variable " + id);
 			node.getChild(2).accept(this, output);
+			output.add("  dup");
 			output.add("  " + t2a[data.type] + "store " + data.location + "   ; " + id);
+			return data.type;
 		}
-		return output;
+	}
+
+	public Integer visit(CMMASTStatementNode node, List<String> output) {
+		if (visitChildren(node, output) != null)
+			output.add("  pop");
+		return null;
 	}
 
 	@Override
-	public List<String> visit(CMMASTStatementNode node, List<String> output) {
-		visitChildren(node, output);
-		return output;
+	public Integer visit(CMMASTTypeNode node, List<String> output) {
+		throw new RuntimeException("Internal error: visiting Type node");
 	}
 
-	@Override
-	public List<String> visit(CMMASTTypeNode node, List<String> output) {
-		return output;
-	}
-
-	public List<String> visit(CMMASTIfStatementNode node, List<String> output) {
+	public Integer visit(CMMASTIfStatementNode node, List<String> output) {
 		throw new UnsupportedOperationException("if statements are not yet implemented");
+		// return null
 	}
 
 	// Declaration -> Type Identifier (listsep Identifier)* eol
-	public List<String> visit(CMMASTDeclarationNode node, List<String> output) {
+	public Integer visit(CMMASTDeclarationNode node, List<String> output) {
 		CMMASTNode type = node.getChild(0);
 		String stype = type.getChild(0).getName();
 		int itype = s2t(stype);
 		for (int i = 1; i < node.numChildren(); i += 2)
 			frames.peek().addVariable(node.getChild(i).getValue(), itype);
-		return output;
+		return null;
 	}
 
-	public List<String> visit(CMMASTProgramNode node, List<String> output) {
+	public Integer visit(CMMASTProgramNode node, List<String> output) {
 		output.addAll(Arrays.asList(header));
 		visitChildren(node, output);
-		return output;
+		output.addAll(Arrays.asList(trailer));
+		return null;
 	}
 
-	public List<String> visit(CMMASTBlockNode node, List<String> output) {
+	public Integer visit(CMMASTBlockNode node, List<String> output) {
 		frames.push(new StackFrame(frames.peek()));
 		visitChildren(node, output);
 		frames.pop();
-		return output;
+		return null;
 	}
 
-	@Override
-	public List<String> visit(CMMASTToken node, List<String> output) {
+	public Integer visit(CMMASTToken node, List<String> output) {
 		if (node.getName().equals("number")) {
-			output.add("  ldc " + node.getValue());
+			output.add("  ldc " + Float.valueOf(node.getValue()));
+			return NUMBER;
 		} else if (node.getName().equals("string")) {
 			output.add("  ldc " + node.getValue());
+			return STRING;
 		} else if (node.getName().equals("boolean")) {
 			output.add("  ldc " + (node.getValue().equals("true")));
+			return BOOLEAN;
 		} else if (node.getName().equals("id")) {
 			Data data = lookup(node.getValue());
 			output.add("  " + t2a[data.type] + "load " + data.location + "   ;" + node.getValue());
+			return data.type;
 		}
-		return output;
+		return null;
 	}
 
 	/**
@@ -391,6 +504,8 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 		CMMTokenizer t = new CMMTokenizer(r);
 		CMMParser p = new CMMParser(t);
 		CMMASTNode n = null;
+		System.out.print("Parsing...");
+		System.out.flush();
 		try {
 			n = p.parse();
 		} catch (CMMTokenizerException e) {
@@ -400,10 +515,11 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 			System.err.println("A parse exception occured:" + e);
 			System.exit(-1);
 		}
-		System.out.println("Program parsed successfully - attempting to compile...");
+		System.out.print("compiling...");
+		System.out.flush();
 		CMMJasminVisitor v = new CMMJasminVisitor();
-		List<String> output = n.accept(v, new ArrayList<String>());
-		// System.out.print(output);
+		List<String> output = new ArrayList<String>();
+		n.accept(v, output);
 		try {
 			PrintStream os = new PrintStream(new FileOutputStream("a.j"));
 			for (String l : output) {
@@ -412,6 +528,6 @@ public class CMMJasminVisitor implements CMMVisitor<List<String>, List<String>> 
 		} catch (IOException e) {
 			System.err.println(e);
 		}
-		System.out.println("Output written to a.j");
+		System.out.println("done\nOutput written to a.j");
 	}
 }
