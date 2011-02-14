@@ -30,6 +30,10 @@ rparen: \)
 # list separator
 listsep: ,
 
+# logical operators
+and: &
+or: \|
+
 # arithmetic operators
 plus: \+
 minus: -
