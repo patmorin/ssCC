@@ -42,6 +42,10 @@ divide: /
 mod: %
 exp: \^
 
+# unary negation
+not: !
+
+
 # comparison operators
 eq: ==
 lt: <

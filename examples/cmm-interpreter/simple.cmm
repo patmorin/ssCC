@@ -9,19 +9,49 @@ number count(number n) {
   number i;
   i = 0;
   while (i < n) {
-    println(i);
+    println(i^2);
     i = i + 1;
   }
   return i;
 }
 
+number numtester(number x, number y) {
+  println(x);
+  println(y);
+  println(x+y);
+  println(x-y);
+  println(x*y);
+  println(x/y);
+  println(x^y);
+  println(x%y);
+  return x;
+}
+
+boolean booltester(boolean x, boolean y) {
+  println(x);
+  println(y);
+  println(x&y);
+  println(x|y);
+  return x;
+}
+
+boolean nottest(boolean v) {
+  println(v);
+  // println(!v);  // generates error - not yet implemented
+  return v;
+}
+
+boolean inittest() {
+  number x;
+  // println(x);  // generates an error - unitialized register
+  return false;
+}
+
 // do some stupid things
 number main() {
-  number x;
-  x = 5 + 7;
-  println(x * 2);
+  println(numtester(2,3));
+  println(booltester(true, false));
   count(10);
-  gt(5, 2);
-  return 22;
+  return 0;
 }
 

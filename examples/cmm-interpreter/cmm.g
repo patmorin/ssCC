@@ -35,7 +35,8 @@ Comparison -> Sum ((lt|gt|eq|le|ge|ne) Sum)?  [>1]
 Sum -> Term ((plus|minus) Term)*  [>1]
 Term -> Exp ((multiply|divide|mod) Exp)* [>1]  
 Exp -> Element (exp Element)*  [>1] 
-Element -> Constant | lparen Logical rparen | ElementPlus
+Element -> Constant | lparen Logical rparen | ElementPlus | NottedElement
+NottedElement -> not Element
 ElementPlus -> id ArgumentList?
 
 Constant -> string | boolean | number
